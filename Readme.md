@@ -8,13 +8,14 @@ All encryption is done in-flight.
 
 To build you'll need a Go compiler and AWS Go SDK modules.
 
+```
 go get github.com/aws/aws-sdk-go/aws
 go get github.com/aws/aws-sdk-go/aws/awserr
 go get github.com/aws/aws-sdk-go/aws/credentials
 go get github.com/aws/aws-sdk-go/aws/session
 go get github.com/aws/aws-sdk-go/service/s3
 go build
-
+```
 
 ## Usage examples
 
@@ -50,3 +51,6 @@ AES key is 128 bit in hexadecimal format.
 First 16 bytes are random IV, the rest is original file encrypted in AES-CTR
 mode.
 
+## TODO
+
+Parallel upload and download.
