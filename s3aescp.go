@@ -1,9 +1,3 @@
-/*
-
-https://github.com/apoorvam/aws-s3-multipart-upload/blob/master/aws-multipart-upload.go
-
-*/
-
 package main
 
 import (
