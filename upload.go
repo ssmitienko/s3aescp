@@ -173,6 +173,10 @@ func UploadAndEncrypt(source string, dest string, block cipher.Block, verbose bo
 			stream.XORKeyStream(ciphertext, plaintext[:currentBlock])
 		}
 
+		if verbose {
+			log.Println("Processing block:", blockNum)
+		}
+
 		completedPart, err := uploadPart(svc, resp, ciphertext[:currentBlock], blockNum)
 
 		if err != nil {
@@ -230,10 +234,9 @@ func uploadPart(svc *s3.S3, resp *s3.CreateMultipartUploadOutput, fileBytes []by
 				}
 				return nil, err
 			}
-			fmt.Printf("Retrying to upload part #%v\n", partNumber)
+			fmt.Fprintf(os.Stderr,"Retrying to upload part #%v\n", partNumber)
 			tryNum++
-		} else {
-			fmt.Printf("Uploaded part #%v\n", partNumber)
+		} else {			
 			return &s3.CompletedPart{
 				ETag:       uploadResult.ETag,
 				PartNumber: aws.Int64(int64(partNumber)),

@@ -110,7 +110,7 @@ func DownloadAndDecrypt(source string, dest string, block cipher.Block, verbose 
 		}
 
 		res, err := svc.GetObject(input)
-		CheckErrorAndExit("S3 query result", err)
+		CheckErrorAndExit("S3 GetObject result", err)
 
 		currentBuffer := currentBlock
 
