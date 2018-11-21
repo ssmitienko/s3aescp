@@ -7,7 +7,7 @@ import (
 	"io"
 	"log"
 	"os"
-	
+
 	"crypto/aes"
 	"crypto/cipher"
 	"crypto/rand"
@@ -18,19 +18,19 @@ import (
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/s3"	
+	"github.com/aws/aws-sdk-go/service/s3"
 )
 
 const (
 	maxRetries = 10
 )
 
-func UploadAndEncrypt(source string, dest string , block cipher.Block, verbose bool, chunkSize  int64, configuration Configuration) (int) {
+func UploadAndEncrypt(source string, dest string, block cipher.Block, verbose bool, chunkSize int64, configuration Configuration) int {
 
 	if verbose {
-		log.Println("Uploading ", source, " to ", dest )
+		log.Println("Uploading ", source, " to ", dest)
 	}
-	
+
 	fileIn, err := os.Open(source)
 
 	CheckErrorAndExit("Failed to open file", err)
@@ -38,7 +38,7 @@ func UploadAndEncrypt(source string, dest string , block cipher.Block, verbose b
 	defer fileIn.Close()
 
 	statIn, err := os.Stat(source)
-	
+
 	CheckErrorAndExit("Failed to read file info", err)
 
 	/*
@@ -47,7 +47,7 @@ func UploadAndEncrypt(source string, dest string , block cipher.Block, verbose b
 
 	iv := make([]byte, aes.BlockSize)
 
-	_, err = io.ReadFull(rand.Reader, iv); 
+	_, err = io.ReadFull(rand.Reader, iv)
 	CheckErrorAndExit("Can't get random data for AES IV", err)
 
 	/*
@@ -57,25 +57,24 @@ func UploadAndEncrypt(source string, dest string , block cipher.Block, verbose b
 	u, err := url.Parse(dest)
 	CheckErrorAndExit("Failed to parse destination", err)
 
-	if verbose {		
+	if verbose {
 		log.Println("Source file size: ", statIn.Size())
 		log.Println("scheme ", u.Scheme, " backet ", u.Host, " path ", u.Path)
 	}
 
-
 	creds := credentials.NewStaticCredentials(configuration.AwsAccessKeyID, configuration.AwsSecretAccessKey, "")
 	_, err = creds.Get()
 	CheckErrorAndExit("Bad AWS credentials", err)
-	
+
 	cfg := aws.NewConfig().WithRegion(configuration.AwsBucketRegion).WithCredentials(creds)
 	svc := s3.New(session.New(), cfg)
-	
+
 	ctype := "binary/octet-stream"
 
 	stream := cipher.NewCTR(block, iv)
 
-	plaintext := make ([]byte, chunkSize)
-	ciphertext := make ([]byte, chunkSize)
+	plaintext := make([]byte, chunkSize)
+	ciphertext := make([]byte, chunkSize)
 
 	remain := statIn.Size() + 16
 
@@ -90,9 +89,9 @@ func UploadAndEncrypt(source string, dest string , block cipher.Block, verbose b
 			log.Println("Doing simple 1-block upload, bytes:", remain)
 		}
 
-		r, err := fileIn.Read(plaintext[aes.BlockSize:])					
+		r, err := fileIn.Read(plaintext[aes.BlockSize:])
 		CheckErrorAndExit("Can't read source file", err)
-	
+
 		r += aes.BlockSize
 		if r != int(remain) {
 			CheckErrorAndExit("Failed to read input file", errors.New("Incomplete read"))
@@ -103,14 +102,14 @@ func UploadAndEncrypt(source string, dest string , block cipher.Block, verbose b
 
 		// Upload input parameters
 		input := &s3.PutObjectInput{
-    		Bucket: &u.Host,
-    		Key:    &u.Path,
-    		ContentType: &ctype,
-    		Body:   bytes.NewReader(ciphertext[:r]),
+			Bucket:      &u.Host,
+			Key:         &u.Path,
+			ContentType: &ctype,
+			Body:        bytes.NewReader(ciphertext[:r]),
 		}
 
 		result, err := svc.PutObject(input)
-		
+
 		CheckErrorAndExit("Failed to upload file", err)
 		fmt.Printf("Successfully uploaded file: %s\n", result.String())
 
@@ -122,9 +121,9 @@ func UploadAndEncrypt(source string, dest string , block cipher.Block, verbose b
 	*/
 
 	input := &s3.CreateMultipartUploadInput{
-			Bucket: &u.Host,
-			Key: &u.Path,
-			ContentType: &ctype,
+		Bucket:      &u.Host,
+		Key:         &u.Path,
+		ContentType: &ctype,
 	}
 
 	resp, err := svc.CreateMultipartUpload(input)
@@ -132,7 +131,7 @@ func UploadAndEncrypt(source string, dest string , block cipher.Block, verbose b
 
 	var completedParts []*s3.CompletedPart
 
-	blockNum := 1;
+	blockNum := 1
 
 	for remain > 0 {
 
@@ -151,12 +150,12 @@ func UploadAndEncrypt(source string, dest string , block cipher.Block, verbose b
 
 		var r int
 
-		if blockNum == 1 {			
-			r, err = fileIn.Read(plaintext[aes.BlockSize:])			
+		if blockNum == 1 {
+			r, err = fileIn.Read(plaintext[aes.BlockSize:])
 			r += aes.BlockSize
 
 		} else {
-			r, err = fileIn.Read(plaintext)			
+			r, err = fileIn.Read(plaintext)
 		}
 
 		CheckErrorAndExit("Can't read source file", err)
@@ -179,10 +178,10 @@ func UploadAndEncrypt(source string, dest string , block cipher.Block, verbose b
 		completedPart, err := uploadPart(svc, resp, ciphertext[:currentBlock], blockNum)
 
 		if err != nil {
-			fmt.Fprintf(os.Stderr,"MultipartUpload failed: %v\n", err)		
+			fmt.Fprintf(os.Stderr, "MultipartUpload failed: %v\n", err)
 			err := abortMultipartUpload(svc, resp)
 			if err != nil {
-				fmt.Fprintf(os.Stderr,"abortion of MultipartUpload failed: %v\n", err)		
+				fmt.Fprintf(os.Stderr, "abortion of MultipartUpload failed: %v\n", err)
 			}
 			return 1
 		}

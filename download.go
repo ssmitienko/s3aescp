@@ -2,43 +2,42 @@ package main
 
 import (
 	"errors"
-	"fmt"	
+	"fmt"
 	"log"
 	"os"
-	
+
 	"crypto/aes"
-	"crypto/cipher"	
+	"crypto/cipher"
 
 	"net/url"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/s3"	
+	"github.com/aws/aws-sdk-go/service/s3"
 )
 
-func DownloadAndDecrypt(source string, dest string , block cipher.Block, verbose bool, chunkSize  int64, configuration Configuration) (int) {
+func DownloadAndDecrypt(source string, dest string, block cipher.Block, verbose bool, chunkSize int64, configuration Configuration) int {
 
 	if verbose {
-		log.Println("Downloading ", source, " to ", dest )
+		log.Println("Downloading ", source, " to ", dest)
 	}
 
 	u, err := url.Parse(source)
 	CheckErrorAndExit("Failed to parse source", err)
 
-	if verbose {				
+	if verbose {
 		log.Println("scheme ", u.Scheme, " backet ", u.Host, " path ", u.Path)
 	}
-
 
 	creds := credentials.NewStaticCredentials(configuration.AwsAccessKeyID, configuration.AwsSecretAccessKey, "")
 	_, err = creds.Get()
 	CheckErrorAndExit("Bad AWS credentials", err)
-	
+
 	cfg := aws.NewConfig().WithRegion(configuration.AwsBucketRegion).WithCredentials(creds)
 	svc := s3.New(session.New(), cfg)
 
-	fileOut, err := os.OpenFile(dest, os.O_RDWR | os.O_CREATE, 0666)
+	fileOut, err := os.OpenFile(dest, os.O_RDWR|os.O_CREATE, 0666)
 	CheckErrorAndExit("Failed to open file", err)
 
 	defer fileOut.Close()
@@ -47,9 +46,9 @@ func DownloadAndDecrypt(source string, dest string , block cipher.Block, verbose
 		first do HEAD to get file size
 	*/
 
-	head := &s3.HeadObjectInput{    	
-    	Bucket: &u.Host,
-    	Key:    &u.Path,
+	head := &s3.HeadObjectInput{
+		Bucket: &u.Host,
+		Key:    &u.Path,
 	}
 
 	result, err := svc.HeadObject(head)
@@ -58,15 +57,15 @@ func DownloadAndDecrypt(source string, dest string , block cipher.Block, verbose
 	if verbose {
 		log.Printf("File size is %v", *result.ContentLength)
 	}
-	
+
 	if *result.ContentLength < aes.BlockSize {
 		CheckErrorAndExit("Operation failed", errors.New("Object is too small for an encrypted file"))
 	}
 
 	ivinput := &s3.GetObjectInput{
-    	Bucket: &u.Host, 
-    	Key:    &u.Path,
-    	Range:  aws.String("bytes=0-15"),
+		Bucket: &u.Host,
+		Key:    &u.Path,
+		Range:  aws.String("bytes=0-15"),
 	}
 
 	ivresult, err := svc.GetObject(ivinput)
@@ -83,12 +82,12 @@ func DownloadAndDecrypt(source string, dest string , block cipher.Block, verbose
 
 	stream := cipher.NewCTR(block, iv)
 
-	plaintext := make ([]byte, chunkSize)
-	ciphertext := make ([]byte, chunkSize)
+	plaintext := make([]byte, chunkSize)
+	ciphertext := make([]byte, chunkSize)
 
-	remain := *result.ContentLength - 16	
-	blockNum := 0;
-	
+	remain := *result.ContentLength - 16
+	blockNum := 0
+
 	var offset int64 = 16
 
 	for remain > 0 {
@@ -105,20 +104,20 @@ func DownloadAndDecrypt(source string, dest string , block cipher.Block, verbose
 		}
 
 		input := &s3.GetObjectInput{
-			Bucket: &u.Host, 
-    		Key:    &u.Path,
-    		Range:  aws.String(frange),
+			Bucket: &u.Host,
+			Key:    &u.Path,
+			Range:  aws.String(frange),
 		}
 
 		res, err := svc.GetObject(input)
-		CheckErrorAndExit("S3 query result", err)		
+		CheckErrorAndExit("S3 query result", err)
 
 		currentBuffer := currentBlock
 
 		for currentBuffer > 0 {
 			rc, _ = res.Body.Read(ciphertext)
 			//CheckErrorAndExit("S3 query result", err)
-			
+
 			if verbose {
 				log.Println("Got ", rc, " bytes")
 			}
@@ -142,4 +141,3 @@ func DownloadAndDecrypt(source string, dest string , block cipher.Block, verbose
 	return 0
 
 }
-
