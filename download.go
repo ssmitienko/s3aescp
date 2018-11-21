@@ -118,10 +118,6 @@ func DownloadAndDecrypt(source string, dest string, block cipher.Block, verbose 
 			rc, _ = res.Body.Read(ciphertext)
 			//CheckErrorAndExit("S3 query result", err)
 
-			if verbose {
-				log.Println("Got ", rc, " bytes")
-			}
-
 			stream.XORKeyStream(plaintext[:rc], ciphertext[:rc])
 
 			w, err := fileOut.Write(plaintext[:rc])
@@ -139,5 +135,4 @@ func DownloadAndDecrypt(source string, dest string, block cipher.Block, verbose 
 	}
 
 	return 0
-
 }

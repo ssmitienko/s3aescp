@@ -38,7 +38,6 @@ func UploadAndEncrypt(source string, dest string, block cipher.Block, verbose bo
 	defer fileIn.Close()
 
 	statIn, err := os.Stat(source)
-
 	CheckErrorAndExit("Failed to read file info", err)
 
 	/*
@@ -109,7 +108,6 @@ func UploadAndEncrypt(source string, dest string, block cipher.Block, verbose bo
 		}
 
 		result, err := svc.PutObject(input)
-
 		CheckErrorAndExit("Failed to upload file", err)
 		fmt.Printf("Successfully uploaded file: %s\n", result.String())
 
@@ -180,9 +178,7 @@ func UploadAndEncrypt(source string, dest string, block cipher.Block, verbose bo
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "MultipartUpload failed: %v\n", err)
 			err := abortMultipartUpload(svc, resp)
-			if err != nil {
-				fmt.Fprintf(os.Stderr, "abortion of MultipartUpload failed: %v\n", err)
-			}
+			CheckErrorAndExit("abortion of MultipartUpload failed", err)
 			return 1
 		}
 
