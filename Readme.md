@@ -35,6 +35,23 @@ Localy decrypt file:
 
 s3aescp -config /etc/s3aescp.json -encrypt mybackup.zip.aes mybackup.zip
 
+## Sample backup script for Proxmox
+
+```
+#!/bin/sh
+
+BACKET="my.backup.bucket"
+BASEDIR="/var/lib/vz/dump/"
+VMS="100 101 102 103 104"
+
+for vm in $VMS; do
+find "$BASEDIR" -name "vzdump-qemu-$vm-"\*vma.lzo -type f -printf '%T@ %p\n' | sort -n | tail -1 | cut -f2- -d" " | while read name; do
+basename=`basename $name`
+s3aescp -config /etc/s3aescp.json $name "s3://$BACKET/host/$basename.aes"
+done
+done
+```
+
 ## Config file format
 
 {
