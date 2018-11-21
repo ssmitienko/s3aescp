@@ -1,0 +1,6 @@
+{
+     "AwsAccessKeyID": "YourAwsKeyID",
+     "AwsSecretAccessKey": "YourAWSSecret",
+     "AwsBucketRegion": "eu-central-1",
+     "AesKey": "00112233445566778899aabbccddeeff"
+}
