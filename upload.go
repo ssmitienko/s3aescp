@@ -115,7 +115,7 @@ func UploadAndEncrypt(source string, dest string, block cipher.Block, verbose bo
 	}
 
 	/*
-		Do nultipart upload
+		Do multipart upload
 	*/
 
 	input := &s3.CreateMultipartUploadInput{
