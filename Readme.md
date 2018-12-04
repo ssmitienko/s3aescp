@@ -33,7 +33,7 @@ s3aescp -config /etc/s3aescp.json -encrypt mybackup.zip mybackup.zip.aes
 
 Localy decrypt file:
 
-s3aescp -config /etc/s3aescp.json -encrypt mybackup.zip.aes mybackup.zip
+s3aescp -config /etc/s3aescp.json -decrypt mybackup.zip.aes mybackup.zip
 
 ## Sample backup script for Proxmox
 
@@ -62,6 +62,7 @@ done
 }
 
 AES key is 128 bit in hexadecimal format.
+To generate random key use 'openssl rand -hex 16'.
 
 ## .aes file format
 
